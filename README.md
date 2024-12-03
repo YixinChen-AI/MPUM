@@ -11,6 +11,9 @@ You need to install Torch according to your CUDA version. Torch official website
 
 ### step 2: well-trained ckpt
 download well-trained .pth file
+1. v0-1.pth
+   - BaiDuWangPan: https://pan.baidu.com/s/1R_tyNTdgXdVaIEL9xRvaJQ  提取码：99x7 
+   - Google Drive: Soon
 
 ## step 3: inference
 1. You could use in .py
