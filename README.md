@@ -40,12 +40,13 @@ config = {
 inference(config,
          nii_path=XXX,
           output_seg_path=XXX)
+```
 - config:
   - modality: "ct", "pet", "mr";
   - ckpt: the .pth path in step 2;
 - nii_path: input nii path (not supported dcm files as input for now);
 - output_set_path: the output dir path.
-```
+
 
 ### step 4: check output
 The output file structure:
