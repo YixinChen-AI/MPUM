@@ -7,6 +7,13 @@ The integration of deep learning in medical imaging has shown great promise for 
 ![image](https://github.com/YixinChen-AI/MPUM/blob/main/overview.png)
 _Overview of the modality projection universal model. **a,** Training process of the MPUM leveraging data from three distinct modalities. **b,** Comparison of two common multimodal data training strategies with our proposed modality-projection strategy. **c,** Application of the MPUM model as an aided identification tool across three modalities (over 500 categories). **d,** The MPUM model is utilized as an computer-aided diagnosis (CAD) tool for precise localization of intracranial hemorrhage with CT scans. **e,** Application of the MPUM Model as an aided analysis tool in identifying altered metabolic correlations in regions affected by epilepsy. **f,** Additional experimental results, including t-SNE visualizations of feature extraction operators and analysis of the network's saliency map._
 
+## Display of ICH results
+
+![image](https://github.com/YixinChen-AI/MPUM/blob/main/case2.png)
+_Performance of the MPUM Framework as aided diagnosis tool. **a,** Utilization of the MPUM as an aided diagnosis tool to detect hemorrhages and map brain regions from CT head scans, facilitating a precise diagnosis automatically. **b,** Illustration of the impact of the MPUM framework on enhancing diagnostic accuracy and support to general doctor in real-world settings._
+
+## Display of Epilepsy results
+
 ![image](https://github.com/YixinChen-AI/MPUM/blob/main/qianfoshan.png)
 _Multi-organ metabolic association analysis for pediatric epilepsy based on the universal model. We analyzed the metabolic associations in the epilepsy patient group (n=50) and the control group (n=22), using Fisher Z-Transformation to calculate the significance of differences in Pearson correlation coefficients. **a&b,** Schematic representation of the connectivity among brain regions associated with the Right Anterior Temporal Lobe Lateral Part and the right middle and inferior temporal gyrus. The left diagrams illustrate the strong metabolic connection within the control group. Notably, these correlations are statistically significantly reduced in the patient group (p<0.001). **c,** Metabolic connectivity between the Pallidum and Vertebrae T1-T12 affected by epilepsy._
 
