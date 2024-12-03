@@ -35,15 +35,8 @@ inference(config,
 
 ### step 4: check output
 The output file structure:
-···
-output/
-├── model_output/
-│   ├── model1.pth
-│   ├── model2.pth
-│   └── logs.txt
-├── results/
-│   ├── accuracy.csv
-│   └── loss_plot.png
-└── config/
-    └── settings.json
-···
+```
+output_seg_path/
+├── readme.json # including the mapping between index and categories
+└── merge.nii.gz # the segments for nii_path
+```
