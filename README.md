@@ -36,6 +36,8 @@ download well-trained .pth file
 ## step 3: inference
 1. You could use in .py
 ```
+import sys
+sys.path.append({MPUM git path})
 from inference import inference
 config = {
                 "tissuenumber":215,
@@ -46,7 +48,7 @@ config = {
             }
 inference(config,
          nii_path=XXX,
-          output_seg_path=XXX)
+         output_seg_path=XXX)
 ```
 - config:
   - modality: "ct", "pet", "mr";
