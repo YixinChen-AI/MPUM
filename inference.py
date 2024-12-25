@@ -172,6 +172,7 @@ def inference(config, nii_path,output_seg_path,output_stdct_path=None,check=True
     '''
         dataset_mapping_to_model: .json file path
     '''
+    config["tissuenumber"] = 215
     ct_path = nii_path
     # assert "." not in output_seg_path, "output_seg_path should be a dir path, not a file path"
     
@@ -255,48 +256,52 @@ def inference(config, nii_path,output_seg_path,output_stdct_path=None,check=True
                             device="cpu",
                             progress=True)
                 wb_pred = torch.sigmoid(wb_pred)
+                if config["tissue"] == "all":
+                    pass
+                elif config["tissue"] == "brain":
+                    wb_pred[:,1:132] = 0
                 wb_preds.append(wb_pred)
-            wb_pred = 0
-            for www in wb_preds:
-                wb_pred += www
+        wb_pred = 0
+        for www in wb_preds:
+            wb_pred += www
 
-            if dataset_mapping_to_model is not None:
-                dataset_to_model_config = dataset_config_to_rulematrix(dataset_mapping_to_model)
-                b,c,z,w,y = wb_pred.shape
-                pred = torch.matmul(dataset_to_model_config.float(), wb_pred.view(b,c,-1)).view(b,-1,z,w,y)
-                for ii,value in enumerate(torch.sum(dataset_to_model_config,dim=1)):
-                    if value == 1:
-                        continue
-                    pred[0,ii],_ = torch.max(wb_pred[0][dataset_to_model_config[ii]==1],dim=0)
-                wb_pred = pred.float()
-                with open(dataset_mapping_to_model,"r") as f:
-                    d = json.load(f)
-                readme = {}
-                for key in d:
-                    readme[len(readme)] = key
-            else:
-                from categories import prediction as label215
-                readme = label215
+        if dataset_mapping_to_model is not None:
+            dataset_to_model_config = dataset_config_to_rulematrix(dataset_mapping_to_model)
+            b,c,z,w,y = wb_pred.shape
+            pred = torch.matmul(dataset_to_model_config.float(), wb_pred.view(b,c,-1)).view(b,-1,z,w,y)
+            for ii,value in enumerate(torch.sum(dataset_to_model_config,dim=1)):
+                if value == 1:
+                    continue
+                pred[0,ii],_ = torch.max(wb_pred[0][dataset_to_model_config[ii]==1],dim=0)
+            wb_pred = pred.float()
+            with open(dataset_mapping_to_model,"r") as f:
+                d = json.load(f)
+            readme = {}
+            for key in d:
+                readme[len(readme)] = key
+        else:
+            from categories import prediction as label215
+            readme = label215
 
-            combined = torch.argmax(wb_pred[0],dim=0).detach().cpu()
-            sitk_image = sitk.GetImageFromArray(combined)
-            # 设置方向和像素间距
-            sitk_image.SetDirection(ct_itk.GetDirection())
-            sitk_image.SetSpacing(ct_itk.GetSpacing())
-            sitk_image.SetOrigin(ct_itk.GetOrigin())
-        
-            resampler = sitk.ResampleImageFilter()
-            resampler.SetReferenceImage(orict_itk)
-            resampler.SetInterpolator(sitk.sitkNearestNeighbor)
-            sitk_image = resampler.Execute(sitk_image)
-            array = sitk.GetArrayFromImage(sitk_image)
-            print(np.max(array))
-            print(array.shape)
-            if not os.path.exists(output_seg_path):
-                os.makedirs(output_seg_path)
-                print(f"目录已创建：{output_seg_path}")
-            sitk.WriteImage(sitk_image, os.path.join(output_seg_path,"merge.nii.gz"))
-            print("create nii.gz ",os.path.join(output_seg_path,"merge.nii.gz"))
+        combined = torch.argmax(wb_pred[0],dim=0).detach().cpu()
+        sitk_image = sitk.GetImageFromArray(combined)
+        # 设置方向和像素间距
+        sitk_image.SetDirection(ct_itk.GetDirection())
+        sitk_image.SetSpacing(ct_itk.GetSpacing())
+        sitk_image.SetOrigin(ct_itk.GetOrigin())
+    
+        resampler = sitk.ResampleImageFilter()
+        resampler.SetReferenceImage(orict_itk)
+        resampler.SetInterpolator(sitk.sitkNearestNeighbor)
+        sitk_image = resampler.Execute(sitk_image)
+        array = sitk.GetArrayFromImage(sitk_image)
+        print(np.max(array))
+        print(array.shape)
+        if not os.path.exists(output_seg_path):
+            os.makedirs(output_seg_path)
+            print(f"目录已创建：{output_seg_path}")
+        sitk.WriteImage(sitk_image, os.path.join(output_seg_path,"merge.nii.gz"))
+        print("create nii.gz ",os.path.join(output_seg_path,"merge.nii.gz"))
     else:
         print("single model mode!!")
         tissueclip = torch.load(os.path.join(current_dir,"tissueclip_RN101.pth")).to("cuda:0")
