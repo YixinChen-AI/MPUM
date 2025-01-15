@@ -40,15 +40,22 @@ import sys
 sys.path.append({MPUM git path})
 from inference import inference
 config = {
-                "tissuenumber":215,
-                "modality":"ct",
+                "tissue":"brain", # (str), "all", "brain"
+                "modality":"pet", # (str), "ct", "pet", "mr"
                 "modelsize":"base",
                 "modalitydimension":512,
-                "ckpt":f"../model_weight/SPC_base_512/epoch_{e}.pth",
+                # single model mode
+                "ckpt":"<the path of ckpt file which has downloaded above (.pth file)>",
+                # multi model ensemble model
+                "ckpt":["the first model ckpt path",
+                        "the second model ckpt path",
+                        ......]
             }
 inference(config,
          nii_path=XXX,
          output_seg_path=XXX)
+
+
 ```
 - config:
   - modality: "ct", "pet", "mr";
@@ -56,7 +63,16 @@ inference(config,
 - nii_path: input nii path (not supported dcm files as input for now);
 - output_set_path: the output dir path.
 
-
+```
+# Take CT scan as an example
+inference(config,
+         nii_path="./sample/sample_ct.nii.gz",
+         output_seg_path="./sample/output_ct")
+# Take PET scan as an example
+inference(config,
+         nii_path="./sample/sample_pet.nii.gz",
+         output_seg_path="./sample/output_pet")
+```
 ### step 4: check output
 The output file structure:
 ```
