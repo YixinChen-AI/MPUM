@@ -44,6 +44,7 @@ config = {
                 "modality":"pet", # (str), "ct", "pet", "mr"
                 "modelsize":"base",
                 "modalitydimension":512,
+
                 # single model mode
                 "ckpt":"<the path of ckpt file which has downloaded above (.pth file)>",
                 # multi model ensemble model
@@ -54,8 +55,6 @@ config = {
 inference(config,
          nii_path=XXX,
          output_seg_path=XXX)
-
-
 ```
 - config:
   - modality: "ct", "pet", "mr";
