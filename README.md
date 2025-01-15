@@ -1,6 +1,6 @@
 # Modality-Projection Universal Model for Comprehensive Full-Body Medical Imaging Segmentation
 
-[***ArXiv paper***]([soon in some days](https://arxiv.org/abs/2412.19026))
+[***ArXiv paper***]([click me](https://arxiv.org/abs/2412.19026))
 
 The integration of deep learning in medical imaging has shown great promise for enhancing diagnostic, therapeutic, and research outcomes. However, applying universal models across multiple modalities remains challenging due to the inherent variability in data characteristics. This study aims to introduce and evaluate a Modality Projection Universal Model (MPUM). MPUM employs a novel modality-projection strategy, which allows the model to dynamically adjust its parameters to optimize performance across different imaging modalities. The MPUM demonstrated superior accuracy in identifying anatomical structures, enabling precise quantification for improved clinical decision-making. It also identifies metabolic associations within the brain-body axis, advancing research on brain-body physiological correlations. Furthermore, MPUM's unique controller-based convolution layer enables visualization of saliency maps across all network layers, significantly enhancing the model’s interpretability.
 
