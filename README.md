@@ -2,6 +2,8 @@
 
 [***ArXiv paper***]([click me](https://arxiv.org/abs/2412.19026))
 
+[![MPUM Tutorial Video](https://img.youtube.com/vi/UWarWZo50mk/maxresdefault.jpg)](https://www.youtube.com/watch?v=UWarWZo50mk)
+
 # Table of Contents
 - [Introduction](#Introduction)
 - [Display of ICH results](#Display-of-ICH-results)
@@ -38,15 +40,15 @@ This package is supported for *Linux*. The package has been tested on the follow
 
 ### Python Dependencies
 `MPUM` mainly depends on the Python scientific stack.
-
 ```
 numpy
 tqdm
 monai==1.2.0
 SimpleITK==2.2.1
 ```
-
 # Installation Guide
+
+
 ## Install from Github
 ```
 git clone git@github.com:YixinChen-AI/MPUM.git
