@@ -2,7 +2,8 @@
 
 [***ArXiv paper***]([click me](https://arxiv.org/abs/2412.19026))
 
-[![MPUM Tutorial Video](https://img.youtube.com/vi/UWarWZo50mk/maxresdefault.jpg)](https://www.youtube.com/watch?v=UWarWZo50mk)
+![MPUM Tutorial Video](https://github.com/YixinChen-AI/MPUM/blob/main/tutorial.gif)
+
 
 # Table of Contents
 - [Introduction](#Introduction)
