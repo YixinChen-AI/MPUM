@@ -226,7 +226,9 @@ def inference(config, nii_path,output_seg_path,output_stdct_path=None,check=True
     elif config["modality"] == 'pet':
         ct = scale_intensity_range(ct, a_min=0, a_max=20, b_min=0.0, b_max=1.0, clip=True)
     elif config["modality"] == "mr":
-        ct = scale_intensity_range(ct, a_min=0, a_max=3000, b_min=0.0, b_max=1.0, clip=True)
+        q_min = torch.quantile(ct, 0.005)  # 0.5% 分位数
+        q_max = torch.quantile(ct, 0.995)  # 99.5% 分位数
+        ct = scale_intensity_range(ct, a_min=q_min, a_max=q_max, b_min=0.0, b_max=1.0, clip=True)
 
     if isinstance(config["ckpt"],list):
         print("multi model mode!!")
