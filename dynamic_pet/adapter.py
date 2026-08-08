@@ -30,6 +30,8 @@ HEADER_TAGS = [
     "RadiopharmaceuticalInformationSequence", "SeriesDate", "SeriesTime",
 ]
 
+REQUIRED_QUANTITATIVE_CORRECTIONS = frozenset({"DECY", "ATTN", "SCAT", "DCAL"})
+
 
 def dicom_datetime(date_value: str, time_value: str) -> datetime:
     date_text = str(date_value)
@@ -68,6 +70,17 @@ def scan_datetime(dataset) -> datetime:
 
 def series_uid_hash(uid: str) -> str:
     return hashlib.sha256(uid.encode("utf-8")).hexdigest()[:16]
+
+
+def validate_quantitative_corrections(dataset):
+    corrected = {str(value).upper() for value in getattr(dataset, "CorrectedImage", [])}
+    missing = sorted(REQUIRED_QUANTITATIVE_CORRECTIONS - corrected)
+    if missing:
+        raise ValueError(
+            "Quantitative SUVbw requires CorrectedImage to include "
+            f"{sorted(REQUIRED_QUANTITATIVE_CORRECTIONS)}; missing {missing}"
+        )
+    return sorted(corrected)
 
 
 def read_series(case_dir: Path):
@@ -153,6 +166,7 @@ def choose_series(groups):
 def validate_suv_metadata(ds):
     if str(ds.Units).upper() != "BQML":
         raise ValueError(f"Unsupported PET units: {ds.Units!s}; BQML is required")
+    validate_quantitative_corrections(ds)
     weight_kg = float(ds.PatientWeight)
     radiopharm = ds.RadiopharmaceuticalInformationSequence[0]
     dose_bq = float(radiopharm.RadionuclideTotalDose)
@@ -289,6 +303,7 @@ def build(case_dir: Path, output_nifti: Path, output_json: Path, window_s: float
             "injection_to_scan_start_s": elapsed_s,
             "denominator_dose_bq": denominator_dose_bq,
             "injection_datetime_source": injection_datetime_source(first, radiopharm),
+            "corrected_image": validate_quantitative_corrections(first),
         },
         "image": {
             "shape_zyx": list(shape), "spacing_xyz_mm": spacing,

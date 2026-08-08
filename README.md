@@ -85,9 +85,18 @@ physical LPS geometry, and writes provenance JSON without modifying source
 DICOM files.
 
 Inputs are rejected when SUVbw cannot be derived safely—for example, missing
-or zero patient weight/injected dose, non-BQML units, ambiguous decay timing,
-incomplete frames, or inconsistent geometry. After reference generation, pass
+or zero patient weight/injected dose, non-BQML units, absent decay/attenuation/
+scatter/dose-calibration declarations, ambiguous decay timing, or inconsistent
+geometry. Incomplete time frames are excluded and recorded in provenance; the
+adapter fails if no complete frames remain. After reference generation, pass
 the resulting `pet_late_600s_suvbw.nii.gz` to the normal PET inference API.
+
+Technical validation covered both supported DICOM layouts. In a ten-case
+classic-DICOM cohort, all six quantitatively valid cases completed MPUM
+inference with matching output geometry; four invalid cases were rejected for
+zero injected activity or non-BQML, non-attenuation/scatter-corrected data. The
+Enhanced PET and classic-DICOM adapters also reproduced independently built
+reference volumes exactly (maximum absolute voxel difference 0).
 
 ## inference
 1. You could use in .py

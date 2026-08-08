@@ -17,7 +17,12 @@ import numpy as np
 import pydicom
 import SimpleITK as sitk
 
-from .adapter import injection_datetime, injection_datetime_source, scan_datetime
+from .adapter import (
+    injection_datetime,
+    injection_datetime_source,
+    scan_datetime,
+    validate_quantitative_corrections,
+)
 
 
 def _shared_item(dataset, sequence_name):
@@ -113,9 +118,7 @@ def build_reference(source_dir: Path, output_dir: Path, late_seconds: float, cas
     first_header = rows[0]["header"]
     if str(first_header.Units).upper() != "BQML":
         raise ValueError(f"Expected BQML input, got {first_header.Units}")
-    corrected = {str(x).upper() for x in getattr(first_header, "CorrectedImage", [])}
-    if "DECY" not in corrected:
-        raise ValueError("Input does not declare decay correction in CorrectedImage")
+    corrected = validate_quantitative_corrections(first_header)
 
     weight_kg = float(first_header.PatientWeight)
     radiopharm = first_header.RadiopharmaceuticalInformationSequence[0]
@@ -216,7 +219,7 @@ def build_reference(source_dir: Path, output_dir: Path, late_seconds: float, cas
         "injection_to_scan_start_s": elapsed_s,
         "injection_datetime_source": injection_datetime_source(first_header, radiopharm),
         "denominator_dose_bq": denominator_dose_bq,
-        "corrected_image": [str(x) for x in first_header.CorrectedImage],
+        "corrected_image": corrected,
         "decay_correction": decay_correction or None,
         "decay_handling": decay_note,
         "shape_zyx": list(reference.shape),

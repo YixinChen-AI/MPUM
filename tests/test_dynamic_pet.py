@@ -1,7 +1,12 @@
 import unittest
 from types import SimpleNamespace
 
-from dynamic_pet.adapter import complete_frame_groups, injection_datetime, injection_datetime_source
+from dynamic_pet.adapter import (
+    complete_frame_groups,
+    injection_datetime,
+    injection_datetime_source,
+    validate_quantitative_corrections,
+)
 
 
 class DynamicPetMetadataTest(unittest.TestCase):
@@ -24,6 +29,13 @@ class DynamicPetMetadataTest(unittest.TestCase):
         self.assertEqual(sorted(complete), [0.0, 30000.0])
         self.assertEqual(discarded[0]["slice_count"], 43)
         self.assertEqual(discarded[0]["expected_slice_count"], 71)
+
+    def test_quantitative_corrections_are_required(self):
+        valid = SimpleNamespace(CorrectedImage=["DECY", "ATTN", "SCAT", "DCAL", "NORM"])
+        self.assertIn("ATTN", validate_quantitative_corrections(valid))
+        missing_scatter = SimpleNamespace(CorrectedImage=["DECY", "ATTN", "DCAL"])
+        with self.assertRaisesRegex(ValueError, "SCAT"):
+            validate_quantitative_corrections(missing_scatter)
 
 
 if __name__ == "__main__":
