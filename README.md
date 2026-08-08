@@ -4,10 +4,7 @@
 
 ![MPUM Tutorial Video](https://github.com/YixinChen-AI/MPUM/blob/main/tutorial.gif)
 
-> **Dynamic PET is supported through a validated adapter.** The adapter converts
-> quantitative dynamic PET DICOM into a duration-weighted static SUVbw reference,
-> which can then be segmented by the standard MPUM PET inference API. See the
-> [Dynamic PET quick start](#dynamic-pet-quick-start).
+> **Dynamic PET DICOM is supported.** See the [quick start](#dynamic-pet-quick-start).
 
 
 # Table of Contents
@@ -77,103 +74,18 @@ Soon
 # Usage
 ## Dynamic PET quick start
 
-MPUM segments a three-dimensional PET SUV image rather than a four-dimensional
-time series. The dynamic PET adapter therefore creates a static late-window
-SUVbw reference first; it does not discard or modify the source dynamic frames.
-
-### 1. Build the static SUVbw reference
+MPUM uses a static 3-D SUV image. Convert dynamic PET DICOM into a
+duration-weighted late-window SUVbw reference:
 
 ```bash
 python -m dynamic_pet.cli /path/to/dicom /path/to/reference_output \
   --late-seconds 600 --case-key case_001
 ```
 
-Supported layouts:
-
-| Input layout | Description |
-|---|---|
-| Classic dynamic PET | One DICOM object per slice and time frame |
-| Enhanced PET | One DICOM object containing a complete 3-D time frame |
-
-The default command uses the final 600 seconds. Select a different window when
-required by the tracer and acquisition protocol. Frames are selected by their
-actual overlap with the requested window and averaged using overlap duration as
-the weight. Per-frame/per-slice rescale values and physical LPS geometry are
-preserved.
-
-Reference output:
-
-```text
-reference_output/
-├── pet_late_600s_suvbw.nii.gz
-└── provenance.json                 # classic DICOM
-```
-
-Enhanced PET writes the same NIfTI plus `pet_late_600s_report.json`. Provenance
-records frame timing, effective window coverage, series selection, decay
-handling, SUV metadata, geometry, and excluded incomplete frames. Source DICOM
-files are treated as read-only.
-
-### 2. Run standard MPUM PET inference
-
-```python
-from inference import inference
-
-config = {
-    "tissue": "all",
-    "modality": "pet",
-    "modelsize": "base",
-    "modalitydimension": 512,
-    "ckpt": [
-        "/path/to/fold0.pth",
-        "/path/to/fold1.pth",
-        "/path/to/fold2.pth",
-    ],
-    "correct_brain_laterality": True,
-}
-
-inference(
-    config,
-    nii_path="/path/to/reference_output/pet_late_600s_suvbw.nii.gz",
-    output_seg_path="/path/to/segmentation_output",
-)
-```
-
-The segmentation is written as `segmentation_output/merge.nii.gz` in the
-original reference-image geometry.
-
-### Input safety checks
-
-Inputs are rejected when SUVbw cannot be derived safely—for example, missing
-or zero patient weight/injected dose, non-BQML units, absent decay/attenuation/
-scatter/dose-calibration declarations, ambiguous decay timing, or inconsistent
-geometry. Incomplete time frames are excluded and recorded in provenance; the
-adapter fails if no complete frames remain. After reference generation, pass
-the resulting `pet_late_600s_suvbw.nii.gz` to the normal PET inference API.
-
-These checks are intentional: guessing injected activity or converting
-non-quantitative counts would change MPUM's PET intensity scale and can produce
-misleading segmentation.
-
-### Validation status and limitations
-
-Technical validation covered both supported DICOM layouts. In a ten-case
-classic-DICOM cohort, all six quantitatively valid cases completed MPUM
-inference with matching output geometry; four invalid cases were rejected for
-zero injected activity or non-BQML, non-attenuation/scatter-corrected data. The
-Enhanced PET and classic-DICOM adapters also reproduced independently built
-reference volumes exactly (maximum absolute voxel difference 0).
-
-This establishes technical and visual feasibility, not clinical accuracy: the
-cohort did not include manual segmentation ground truth. Partial-field-of-view
-scans may also contain small anatomically implausible labels. The current MPUM
-output includes label selection, brain-laterality correction, and resampling to
-the input geometry; it does **not** apply largest-connected-component filtering
-or other anatomical cleanup. Preserve `merge.nii.gz` as the raw model output if
-adding application-specific post-processing.
-
-The adapter currently accepts DICOM input, not 4-D NIfTI time series. Static
-NIfTI input remains supported directly by the inference API below.
+Both classic single-slice dynamic PET and Enhanced PET are supported. The input
+must contain quantitative BQML data and valid SUV metadata. Source DICOM files
+are not modified. Pass the generated `pet_late_600s_suvbw.nii.gz` to the PET
+inference API below.
 
 ## inference
 1. You could use in .py
