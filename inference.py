@@ -5,6 +5,7 @@ import numpy as np
 import torch.nn as nn
 from datautils import resampleVolume,adjust_image_direction
 from MPUM import MPUM
+from laterality import correct_brain_laterality_scores
 from tqdm import tqdm
 from collections import OrderedDict
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -267,6 +268,9 @@ def inference(config, nii_path,output_seg_path,output_stdct_path=None,check=True
         for www in wb_preds:
             wb_pred += www
 
+        if config.get("correct_brain_laterality", True):
+            wb_pred = correct_brain_laterality_scores(wb_pred)
+
         if dataset_mapping_to_model is not None:
             dataset_to_model_config = dataset_config_to_rulematrix(dataset_mapping_to_model)
             b,c,z,w,y = wb_pred.shape
@@ -335,6 +339,9 @@ def inference(config, nii_path,output_seg_path,output_stdct_path=None,check=True
                         progress=True)
             # wb_pred = torch.sigmoid(wb_pred)
         print("----------------post-process------------------------")
+
+        if config.get("correct_brain_laterality", True):
+            wb_pred = correct_brain_laterality_scores(wb_pred)
         
         if dataset_mapping_to_model is not None:
             dataset_to_model_config = dataset_config_to_rulematrix(dataset_mapping_to_model)

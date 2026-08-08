@@ -67,6 +67,28 @@ download well-trained .pth file
 ## Install from Pypi
 Soon
 # Usage
+## Dynamic PET adapter
+
+MPUM segments a three-dimensional PET SUV image. For dynamic PET DICOM, build
+a static late-window SUVbw reference first:
+
+```
+python -m dynamic_pet.cli /path/to/dicom /path/to/reference_output \
+  --late-seconds 600 --case-key case_001
+```
+
+The adapter supports both classic single-slice dynamic PET and Enhanced PET
+where each DICOM object contains one complete 3-D frame. It selects frames by
+their overlap with the requested late window and uses overlap duration as the
+averaging weight. It also applies per-frame/per-slice rescale values, preserves
+physical LPS geometry, and writes provenance JSON without modifying source
+DICOM files.
+
+Inputs are rejected when SUVbw cannot be derived safely—for example, missing
+or zero patient weight/injected dose, non-BQML units, ambiguous decay timing,
+incomplete frames, or inconsistent geometry. After reference generation, pass
+the resulting `pet_late_600s_suvbw.nii.gz` to the normal PET inference API.
+
 ## inference
 1. You could use in .py
 ```
@@ -78,6 +100,9 @@ config = {
                 "modality":"pet", # (str), "ct", "pet", "mr"
                 "modelsize":"base",
                 "modalitydimension":512,
+                # Correct the released checkpoints' bilateral brain channels.
+                # Enabled by default; set False only to reproduce legacy output.
+                "correct_brain_laterality": True,
 
                 # single model mode
                 "ckpt":"<the path of ckpt file which has downloaded above (.pth file)>",
@@ -93,6 +118,9 @@ inference(config,
 - config:
   - modality: "ct", "pet", "mr";
   - ckpt: the .pth path in step 2;
+  - correct_brain_laterality: swaps the 40 bilateral brain channel pairs before
+    label selection. This is enabled by default because the released checkpoints
+    otherwise place all bilateral brain labels on the opposite physical side.
 - nii_path: input nii path (not supported dcm files as input for now);
 - output_set_path: the output dir path.
 

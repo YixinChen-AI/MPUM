@@ -15,3 +15,4 @@ pip install tqdm
 pip install monai==1.2.0
 pip install SimpleITK==2.2.1
 pip install einops
+pip install "pydicom>=2.4"
