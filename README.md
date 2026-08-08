@@ -1,18 +1,25 @@
 # Modality-Projection Universal Model for Comprehensive Full-Body Medical Imaging Segmentation
 
-[***ArXiv paper***]([click me](https://arxiv.org/abs/2412.19026))
+[***ArXiv paper***](https://arxiv.org/abs/2412.19026)
 
 ![MPUM Tutorial Video](https://github.com/YixinChen-AI/MPUM/blob/main/tutorial.gif)
 
+> **Dynamic PET is supported through a validated adapter.** The adapter converts
+> quantitative dynamic PET DICOM into a duration-weighted static SUVbw reference,
+> which can then be segmented by the standard MPUM PET inference API. See the
+> [Dynamic PET quick start](#dynamic-pet-quick-start).
+
 
 # Table of Contents
-- [Introduction](#Introduction)
-- [Display of ICH results](#Display-of-ICH-results)
-- [Display of Epilepsy results](#Display-of-Epilepsy-results)
-- [System Requirements](#System-Requirements)
-- [Installation Guide](#Installation-Guide)
-- [Usage](#Usage)
-- [License](#License)
+- [Introduction](#introduction)
+- [Display of ICH results](#display-of-ich-results)
+- [Display of Epilepsy results](#display-of-epilepsy-results)
+- [System Requirements](#system-requirements)
+- [Installation Guide](#installation-guide)
+- [Usage](#usage)
+  - [Dynamic PET quick start](#dynamic-pet-quick-start)
+  - [Inference](#inference)
+- [License](#license)
 
 # Introduction
 The integration of deep learning in medical imaging has shown great promise for enhancing diagnostic, therapeutic, and research outcomes. However, applying universal models across multiple modalities remains challenging due to the inherent variability in data characteristics. This study aims to introduce and evaluate a Modality Projection Universal Model (MPUM). MPUM employs a novel modality-projection strategy, which allows the model to dynamically adjust its parameters to optimize performance across different imaging modalities. The MPUM demonstrated superior accuracy in identifying anatomical structures, enabling precise quantification for improved clinical decision-making. It also identifies metabolic associations within the brain-body axis, advancing research on brain-body physiological correlations. Furthermore, MPUM's unique controller-based convolution layer enables visualization of saliency maps across all network layers, significantly enhancing the model’s interpretability.
@@ -32,7 +39,7 @@ _Multi-organ metabolic association analysis for pediatric epilepsy based on the 
 
 # System Requirements
 ## Hardware requirements
-`MPUM` package requires only a standard computer with enough RAM and a NVIDIA GPU with more than 12G momery.
+`MPUM` requires a standard computer with sufficient RAM and an NVIDIA GPU with more than 12 GB of memory.
 
 ## Software requirements
 ### OS Requirements
@@ -46,6 +53,7 @@ numpy
 tqdm
 monai==1.2.0
 SimpleITK==2.2.1
+pydicom>=2.4
 ```
 # Installation Guide
 
@@ -67,22 +75,74 @@ download well-trained .pth file
 ## Install from Pypi
 Soon
 # Usage
-## Dynamic PET adapter
+## Dynamic PET quick start
 
-MPUM segments a three-dimensional PET SUV image. For dynamic PET DICOM, build
-a static late-window SUVbw reference first:
+MPUM segments a three-dimensional PET SUV image rather than a four-dimensional
+time series. The dynamic PET adapter therefore creates a static late-window
+SUVbw reference first; it does not discard or modify the source dynamic frames.
 
-```
+### 1. Build the static SUVbw reference
+
+```bash
 python -m dynamic_pet.cli /path/to/dicom /path/to/reference_output \
   --late-seconds 600 --case-key case_001
 ```
 
-The adapter supports both classic single-slice dynamic PET and Enhanced PET
-where each DICOM object contains one complete 3-D frame. It selects frames by
-their overlap with the requested late window and uses overlap duration as the
-averaging weight. It also applies per-frame/per-slice rescale values, preserves
-physical LPS geometry, and writes provenance JSON without modifying source
-DICOM files.
+Supported layouts:
+
+| Input layout | Description |
+|---|---|
+| Classic dynamic PET | One DICOM object per slice and time frame |
+| Enhanced PET | One DICOM object containing a complete 3-D time frame |
+
+The default command uses the final 600 seconds. Select a different window when
+required by the tracer and acquisition protocol. Frames are selected by their
+actual overlap with the requested window and averaged using overlap duration as
+the weight. Per-frame/per-slice rescale values and physical LPS geometry are
+preserved.
+
+Reference output:
+
+```text
+reference_output/
+├── pet_late_600s_suvbw.nii.gz
+└── provenance.json                 # classic DICOM
+```
+
+Enhanced PET writes the same NIfTI plus `pet_late_600s_report.json`. Provenance
+records frame timing, effective window coverage, series selection, decay
+handling, SUV metadata, geometry, and excluded incomplete frames. Source DICOM
+files are treated as read-only.
+
+### 2. Run standard MPUM PET inference
+
+```python
+from inference import inference
+
+config = {
+    "tissue": "all",
+    "modality": "pet",
+    "modelsize": "base",
+    "modalitydimension": 512,
+    "ckpt": [
+        "/path/to/fold0.pth",
+        "/path/to/fold1.pth",
+        "/path/to/fold2.pth",
+    ],
+    "correct_brain_laterality": True,
+}
+
+inference(
+    config,
+    nii_path="/path/to/reference_output/pet_late_600s_suvbw.nii.gz",
+    output_seg_path="/path/to/segmentation_output",
+)
+```
+
+The segmentation is written as `segmentation_output/merge.nii.gz` in the
+original reference-image geometry.
+
+### Input safety checks
 
 Inputs are rejected when SUVbw cannot be derived safely—for example, missing
 or zero patient weight/injected dose, non-BQML units, absent decay/attenuation/
@@ -91,12 +151,29 @@ geometry. Incomplete time frames are excluded and recorded in provenance; the
 adapter fails if no complete frames remain. After reference generation, pass
 the resulting `pet_late_600s_suvbw.nii.gz` to the normal PET inference API.
 
+These checks are intentional: guessing injected activity or converting
+non-quantitative counts would change MPUM's PET intensity scale and can produce
+misleading segmentation.
+
+### Validation status and limitations
+
 Technical validation covered both supported DICOM layouts. In a ten-case
 classic-DICOM cohort, all six quantitatively valid cases completed MPUM
 inference with matching output geometry; four invalid cases were rejected for
 zero injected activity or non-BQML, non-attenuation/scatter-corrected data. The
 Enhanced PET and classic-DICOM adapters also reproduced independently built
 reference volumes exactly (maximum absolute voxel difference 0).
+
+This establishes technical and visual feasibility, not clinical accuracy: the
+cohort did not include manual segmentation ground truth. Partial-field-of-view
+scans may also contain small anatomically implausible labels. The current MPUM
+output includes label selection, brain-laterality correction, and resampling to
+the input geometry; it does **not** apply largest-connected-component filtering
+or other anatomical cleanup. Preserve `merge.nii.gz` as the raw model output if
+adding application-specific post-processing.
+
+The adapter currently accepts DICOM input, not 4-D NIfTI time series. Static
+NIfTI input remains supported directly by the inference API below.
 
 ## inference
 1. You could use in .py
@@ -130,8 +207,8 @@ inference(config,
   - correct_brain_laterality: swaps the 40 bilateral brain channel pairs before
     label selection. This is enabled by default because the released checkpoints
     otherwise place all bilateral brain labels on the opposite physical side.
-- nii_path: input nii path (not supported dcm files as input for now);
-- output_set_path: the output dir path.
+- nii_path: static NIfTI input path; use the dynamic PET adapter above for DICOM;
+- output_seg_path: output directory path.
 
 ```
 # Take CT scan as an example
