@@ -3,7 +3,7 @@ import sys,os,json
 import SimpleITK as sitk
 import numpy as np
 import torch.nn as nn
-from datautils import resampleVolume,adjust_image_direction
+from datautils import adjust_image_direction
 from MPUM import MPUM
 from laterality import correct_brain_laterality_scores
 from tqdm import tqdm
@@ -196,8 +196,10 @@ def inference(config, nii_path,output_seg_path,output_stdct_path=None,check=True
 
     print("----------------pre-process <LUCID Standard Protocol>------------------------")
     
-    ct_itk = resampleVolume(new_spacing,ct_itk,resamplemethod=sitk.sitkLinear)
-    ct_itk = adjust_image_direction(ct_itk, new_direction)
+    background = -1000.0 if config["modality"] == "ct" else 0.0
+    ct_itk = adjust_image_direction(
+        ct_itk, new_direction, output_spacing=new_spacing, default_value=background,
+    )
 
     print("after processing, spacing:",ct_itk.GetSpacing())
     print("after processing, direction:",ct_itk.GetDirection())

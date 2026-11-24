@@ -1,33 +1,43 @@
+from itertools import product
+
+import numpy as np
 import SimpleITK as sitk
 
 
-def adjust_image_direction(image, desired_direction,verbose=True):
-    """
-    调整图像的方向到所需方向，如果需要的话会翻转图像。
-    
-    :param image: SimpleITK图像对象
-    :param desired_direction: 一个包含九个元素的元组，表示所需的图像方向
-    :return: 调整方向后的图像
-    """
-    # 获取当前图像的方向
-    current_direction = image.GetDirection()
-    if len(current_direction) == 16:
-        input_array = np.array(current_direction)
-        matrix_4x4 = input_array.reshape((4, 4))
-        sub_matrix_3x3 = matrix_4x4[:3, :3]
-        current_directiony = sub_matrix_3x3.flatten()
+def adjust_image_direction(image, desired_direction, verbose=True, *, output_spacing=None, default_value=0):
+    """Orient a 3-D image while keeping its voxel values in physical space."""
+    desired_direction = tuple(desired_direction)
+    orientation = sitk.DICOMOrientImageFilter.GetOrientationFromDirectionCosines(desired_direction)
+    oriented = sitk.DICOMOrient(image, orientation)
+    if np.allclose(oriented.GetDirection(), desired_direction, rtol=0, atol=1e-6):
+        if verbose:
+            print(f"Image axes oriented to {orientation}")
+        if output_spacing is None:
+            return oriented
+        return resampleVolume(output_spacing, oriented, resamplemethod=sitk.sitkLinear)
 
-    # 计算需要翻转的轴
-    flip_axes = [current_direction[i] * desired_direction[i] < 0 for i in [0,4,8]]
+    # Axis permutations cannot make an oblique image cardinal. Resample its
+    # full voxel extent into the requested direction using physical coordinates.
+    axes = np.asarray(desired_direction).reshape(3, 3)
+    edges = product(*((-0.5, size - 0.5) for size in oriented.GetSize()))
+    world_corners = np.asarray([
+        oriented.TransformContinuousIndexToPhysicalPoint(index) for index in edges
+    ])
+    projected_corners = world_corners @ axes
+    lower = projected_corners.min(axis=0)
+    upper = projected_corners.max(axis=0)
+    spacing = np.asarray(oriented.GetSpacing() if output_spacing is None else output_spacing)
+    size = np.ceil((upper - lower) / spacing).astype(int).tolist()
+    origin = (axes @ (lower + spacing / 2)).tolist()
     if verbose:
-        print("the axis need to be flip?:", flip_axes)
-    # 翻转图像
-    adjusted_image = sitk.Flip(image, flip_axes)
+        print(f"Oblique image resampled to {orientation}")
+    return sitk.Resample(
+        oriented, size, sitk.Transform(3, sitk.sitkIdentity), sitk.sitkLinear,
+        origin, spacing.tolist(), desired_direction, float(default_value),
+        oriented.GetPixelID(),
+    )
 
-    # 设置新的方向
-    adjusted_image.SetDirection(desired_direction)
 
-    return adjusted_image
 def resampleVolume(outspacing, vol,resamplemethod=sitk.sitkNearestNeighbor):
     """
     将体数据重采样的指定的spacing大小\n
