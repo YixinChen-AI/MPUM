@@ -122,6 +122,11 @@ inference(config,
 - nii_path: static NIfTI input path; use the dynamic PET adapter above for DICOM;
 - output_seg_path: output directory path.
 
+Inference reorders axis-aligned input in physical space before resampling to
+the model spacing. Equivalent voxel-axis encodings therefore use the same
+model grid. Oblique scans are resampled directly onto that grid. Output label
+maps are returned to the original NIfTI grid with nearest-neighbor interpolation.
+
 ```
 # Take CT scan as an example
 inference(config,
